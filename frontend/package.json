@@ -1,8 +1,11 @@
 {
-  "name": "frontend",
+  "name": "pau-iibf-transkript",
   "private": true,
   "version": "0.1.0-alpha.1",
-  "productName": "PAU_IIBF_Transkript",
+  "productName": "PAÜ İİBF Ses-Metin Döküm Aracı",
+  "description": "Pamukkale Üniversitesi İİBF Yapay Zeka ve Dijital Uygulamalar Koordinatörlüğü Yerel Transkripsiyon Aracı",
+  "author": "PAÜ İİBF",
+  "main": "main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +19,13 @@
     "directories": {
       "output": "dist-electron"
     },
+    "files": [
+      "dist/**/*",
+      "main.cjs",
+      "package.json",
+      "license.txt",
+      "icon.ico"
+    ],
     "extraResources": [
       {
         "from": "extraResources",
@@ -28,8 +38,12 @@
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
+      "include": "installer.nsh",
       "allowToChangeInstallationDirectory": true,
       "license": "license.txt",
+      "installerSidebar": "installer/sidebar.bmp",
+      "installerHeaderIcon": "public/icon.ico",
       "artifactName": "PAU_IIBF_Transkript_Kurulum.exe"
     },
     "publish": [
@@ -48,7 +62,6 @@
     "concurrently": "^9.2.1",
     "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
-    "electron-updater": "^6.8.3",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.11.0",
     "tailwindcss": "^4.2.4",
@@ -57,6 +70,7 @@
     "wait-on": "^9.0.5"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   }

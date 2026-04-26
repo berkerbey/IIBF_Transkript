@@ -1,15 +1,17 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, List, Any
 import uuid
 import shutil
 import json
+from typing import Dict, List, Any
+
+# Fix for potential OpenMP duplicate library errors
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, Request
+from fastapi.middleware.cors import CORSMiddleware
 from src.transcriber import Transcriber
 from src.exporters import export_txt, export_docx, export_srt
+from src.utils import get_data_path
 
 app = FastAPI(title="SynoptexAI Backend", version="1.0.0")
 
@@ -32,7 +34,8 @@ transcribers: Dict[str, Transcriber] = {}
 async def get_config():
     """Reads the config.json file from disk."""
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
+        config_path = os.path.join(get_data_path(), "config.json")
+        with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return {"model_name": "faster-whisper-medium", "device": "cpu", "compute_type": "int8", "default_language": "tr"}
@@ -41,14 +44,22 @@ async def get_config():
 async def save_config(request: Request):
     """Saves the config object to config.json."""
     data = await request.json()
-    with open("config.json", "w", encoding="utf-8") as f:
+    config_path = os.path.join(get_data_path(), "config.json")
+    with open(config_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
     return {"status": "success"}
+
+@app.get("/check-model")
+async def check_model(model_name: str = "faster-whisper-medium"):
+    """Checks if the requested model is already downloaded."""
+    from src.transcriber import Transcriber
+    path = Transcriber.find_model_path(model_name)
+    return {"exists": path is not None}
 
 @app.post("/open-folder")
 async def open_output_folder():
     """Opens the output folder in the native file explorer."""
-    output_dir = os.path.abspath("outputs")
+    output_dir = os.path.join(get_data_path(), "outputs")
     os.makedirs(output_dir, exist_ok=True)
     try:
         os.startfile(output_dir)
@@ -62,8 +73,9 @@ async def upload_audio(file: UploadFile = File(...)):
     session_id = str(uuid.uuid4())
     
     # Save file to a temp directory
-    os.makedirs("data/uploads", exist_ok=True)
-    file_path = os.path.join("data/uploads", f"{session_id}_{file.filename}")
+    upload_dir = os.path.join(get_data_path(), "data", "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, f"{session_id}_{file.filename}")
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -95,13 +107,30 @@ def process_audio(session_id: str, model_name: str, language: str, device: str):
         return
         
     session["state"] = "PROCESSING"
+    session["phase"] = "PREPARING"
+    session["percent"] = 0
     filepath = session["metadata"]["filepath"]
     
     try:
         # Load model if not already loaded for this session
         t = Transcriber(model_name=model_name, device=device)
-        t.load_model()
+        
+        def download_callback(progress_str):
+            # Only switch to DOWNLOADING if we actually get a progress string
+            session["phase"] = "DOWNLOADING"
+            if "%" in progress_str:
+                try:
+                    percent = int(progress_str.split("%")[0].strip().split()[-1])
+                    session["percent"] = percent
+                except:
+                    pass
+
+        t.load_model(download_callback=download_callback)
         transcribers[session_id] = t
+        
+        # Switch to TRANSCRIBING phase
+        session["phase"] = "TRANSCRIBING"
+        session["percent"] = 0
         
         # We enforce word_timestamps=True for the UI sync requirement
         segments_gen, info = t.model.transcribe(
@@ -132,6 +161,11 @@ def process_audio(session_id: str, model_name: str, language: str, device: str):
                 "words": words
             })
             
+            # Update progress percent for TRANSCRIBING
+            if info.duration > 0:
+                percent = min(99, int((segment.end / info.duration) * 100))
+                session["percent"] = percent
+            
         session["transcript"] = {
             "language": info.language,
             "duration": info.duration,
@@ -145,7 +179,7 @@ def process_audio(session_id: str, model_name: str, language: str, device: str):
         if not safe_base_name:
             safe_base_name = "transcript_output"
             
-        output_dir = os.path.join("outputs", safe_base_name)
+        output_dir = os.path.join(get_data_path(), "outputs", safe_base_name)
         os.makedirs(output_dir, exist_ok=True)
         
         # Prepare legacy format segments
@@ -164,6 +198,7 @@ def process_audio(session_id: str, model_name: str, language: str, device: str):
             json.dump({
                 "session_id": session_id,
                 "filename": session["metadata"]["filename"],
+                "filepath": filepath,
                 "file_size": file_size,
                 "created_at": os.path.getctime(filepath) if os.path.exists(filepath) else 0,
                 "transcript": session["transcript"]
@@ -201,10 +236,11 @@ async def start_transcription(session_id: str, background_tasks: BackgroundTasks
 async def get_history():
     """Reads the outputs directory and returns a list of previously processed sessions."""
     history = []
-    if not os.path.exists("outputs"):
+    output_dir = os.path.join(get_data_path(), "outputs")
+    if not os.path.exists(output_dir):
         return history
         
-    for entry in os.scandir("outputs"):
+    for entry in os.scandir(output_dir):
         if entry.is_dir():
             transcript_file = os.path.join(entry.path, "transcript.json")
             if os.path.exists(transcript_file):

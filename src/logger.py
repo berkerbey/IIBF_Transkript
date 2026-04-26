@@ -3,10 +3,18 @@ import os
 import sys
 
 def setup_logger():
-    # Ensure logs directory exists
-    log_dir = "logs"
+    # Determine log directory
+    if getattr(sys, 'frozen', False):
+        app_data = os.environ.get('APPDATA')
+        if app_data:
+            log_dir = os.path.join(app_data, "pau-iibf-transkript", "logs")
+        else:
+            log_dir = "logs"
+    else:
+        log_dir = "logs"
+
     if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+        os.makedirs(log_dir, exist_ok=True)
 
     log_file = os.path.join(log_dir, "app.log")
     

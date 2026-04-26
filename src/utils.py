@@ -31,17 +31,36 @@ def get_base_path() -> str:
         return sys._MEIPASS # When using pyinstaller, it extracts to Temp/_MEIxx
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+def get_data_path():
+    """Returns the base path for application data (models, outputs, logs)."""
+    if getattr(sys, 'frozen', False):
+        # Use AppData for production to ensure write permissions
+        app_data = os.environ.get('APPDATA')
+        if app_data:
+            base_dir = os.path.join(app_data, "pau-iibf-transkript")
+            if not os.path.exists(base_dir):
+                os.makedirs(base_dir)
+            return base_dir
+    return os.getcwd()
+
 def ensure_directories():
-    """Ensure required directories exist within the working directory."""
-    dirs = ["models", "outputs", "logs", "ffmpeg"]
-    cwd = os.getcwd()
+    """Ensure required directories exist within the data directory."""
+    dirs = ["models", "outputs", "logs"]
+    base_dir = get_data_path()
     for d in dirs:
-        dir_path = os.path.join(cwd, d)
+        dir_path = os.path.join(base_dir, d)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
 def get_ffmpeg_path():
     """Returns the path to bundled ffmpeg if it exists, otherwise assumes it's in PATH."""
+    # FFmpeg is bundled in the resources folder (read-only is fine for execution)
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        bundled_ffmpeg = os.path.join(exe_dir, "ffmpeg", "ffmpeg.exe")
+        if os.path.exists(bundled_ffmpeg):
+            return bundled_ffmpeg
+    
     cwd = os.getcwd()
     bundled_ffmpeg = os.path.join(cwd, "ffmpeg", "ffmpeg.exe")
     if os.path.exists(bundled_ffmpeg):

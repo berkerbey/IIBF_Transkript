@@ -1,7 +1,16 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { autoUpdater } = require('electron-updater');
+
+// Manual update check listeners
+ipcMain.on('check-for-updates', () => {
+  autoUpdater.checkForUpdatesAndNotify();
+});
+
+ipcMain.on('install-update', () => {
+  autoUpdater.quitAndInstall();
+});
 
 let mainWindow;
 let pythonProcess;
@@ -12,9 +21,13 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    icon: path.join(__dirname, 'public/icon.ico'),
+    width: 1400,
+    height: 850,
+    minWidth: 1400,
+    minHeight: 750,
+    icon: app.isPackaged
+      ? path.join(__dirname, 'icon.ico')
+      : path.join(__dirname, 'public/icon.ico'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -27,8 +40,12 @@ function createWindow() {
     }
   });
 
-  // Load Vite dev server
-  mainWindow.loadURL('http://localhost:5173');
+  // Load app
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  } else {
+    mainWindow.loadURL('http://localhost:5173');
+  }
 
   mainWindow.on('closed', function () {
     mainWindow = null;
@@ -41,11 +58,20 @@ function createWindow() {
 }
 
 // Auto-update events
-autoUpdater.on('update-available', () => {
-  console.log('Update available.');
+autoUpdater.on('checking-for-update', () => {
+  mainWindow?.webContents.send('update-status', 'checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+  mainWindow?.webContents.send('update-status', 'available', info.version);
+});
+
+autoUpdater.on('update-not-available', () => {
+  mainWindow?.webContents.send('update-status', 'latest');
 });
 
 autoUpdater.on('update-downloaded', (info) => {
+  mainWindow?.webContents.send('update-status', 'downloaded', info.version);
   dialog.showMessageBox({
     type: 'info',
     title: 'Güncelleme Hazır',
@@ -90,10 +116,36 @@ app.whenReady().then(() => {
   pythonProcess.stdout.on('data', (data) => console.log(`Python: ${data}`));
   pythonProcess.stderr.on('data', (data) => console.error(`Python Error: ${data}`));
 
-  createWindow();
+  // Wait for backend to be ready
+  const checkBackend = () => {
+    const http = require('http');
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds
+
+    const interval = setInterval(() => {
+      attempts++;
+      http.get('http://127.0.0.1:8000/config', (res) => {
+        if (res.statusCode === 200) {
+          clearInterval(interval);
+          createWindow();
+        }
+      }).on('error', (err) => {
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          dialog.showErrorBox("Başlatma Hatası", "Yapay zeka motoru başlatılamadı. Lütfen uygulamayı kapatıp tekrar açmayı deneyin.\nHata: " + err.message);
+          app.quit();
+        }
+      });
+    }, 1000);
+  };
+
+  checkBackend();
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      // Only create if backend was ready (we'll simplify for now)
+      createWindow();
+    }
   });
 });
 

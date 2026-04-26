@@ -1,6 +1,7 @@
 import os
 from faster_whisper import WhisperModel
 from src.logger import logger
+from src.utils import get_data_path
 
 class Transcriber:
     def __init__(self, model_name="faster-whisper-medium", device="cpu", compute_type="int8"):
@@ -19,20 +20,34 @@ class Transcriber:
           3. ~/.cache/huggingface/hub/models--Systran--{model_name}/  (global HF cache)
         """
         import pathlib
+        data_dir = pathlib.Path(get_data_path())
         cwd = pathlib.Path.cwd()
 
-        # 1. Project-local Systran HF format
-        systran_dir = cwd / "models" / f"models--Systran--{model_name}"
+        # 1. AppData/Local models (Production)
+        systran_dir = data_dir / "models" / f"models--Systran--{model_name}"
         if systran_dir.exists():
+            snaps = sorted((systran_dir / "snapshots").iterdir()) if (systran_dir / "snapshots").exists() else []
+            for snap in reversed(snaps):
+                if (snap / "config.json").exists():
+                    return str(snap)
+
+        # 2. Project-local models (Development/Fallback)
+        systran_dir_local = cwd / "models" / f"models--Systran--{model_name}"
+        if systran_dir_local.exists():
             snaps = sorted((systran_dir / "snapshots").iterdir()) if (systran_dir / "snapshots").exists() else []
             for snap in reversed(snaps):  # newest snapshot first
                 if (snap / "config.json").exists():
                     return str(snap)
 
-        # 2. Legacy flat folder
-        flat_dir = cwd / "models" / model_name
+        # 3. Legacy flat folder (AppData)
+        flat_dir = data_dir / "models" / model_name
         if flat_dir.exists() and any(flat_dir.iterdir()):
             return str(flat_dir)
+
+        # 4. Legacy flat folder (Local)
+        flat_dir_local = cwd / "models" / model_name
+        if flat_dir_local.exists() and any(flat_dir_local.iterdir()):
+            return str(flat_dir_local)
 
         # 3. Global HuggingFace hub cache
         hf_hub = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
@@ -90,15 +105,40 @@ class Transcriber:
             sys.stderr = TqdmInterceptor(original_stderr, download_callback)
 
         try:
+            # Ensure the models directory exists in AppData
+            model_root = os.path.join(get_data_path(), "models")
+            os.makedirs(model_root, exist_ok=True)
+            
+            logger.info(f"Model yükleme dizini: {model_root}")
+            
             self.model = WhisperModel(
                 path_to_load,
                 device=self.device,
                 compute_type=self.compute_type,
-                download_root=os.path.join(os.getcwd(), "models")
+                download_root=model_root,
+                local_files_only=False
             )
-            logger.info("Yapay zeka modeli başarıyla yüklendi.")
+            logger.info(f"Yapay zeka modeli başarıyla yüklendi ({self.device} modu).")
             return True
         except Exception as e:
+            error_msg = str(e).lower()
+            # If it's a CUDA/DLL error and we were trying GPU/Auto, fallback to CPU
+            if self.device != "cpu" and ("not found" in error_msg or "cuda" in error_msg or "cublas" in error_msg or "cudnn" in error_msg or "12.dll" in error_msg):
+                logger.warning(f"GPU/CUDA hatası alındı, CPU moduna geçiliyor: {str(e)}")
+                try:
+                    self.model = WhisperModel(
+                        path_to_load,
+                        device="cpu",
+                        compute_type="int8",
+                        download_root=model_root,
+                        local_files_only=False
+                    )
+                    logger.info("Yapay zeka modeli CPU modunda başarıyla yüklendi.")
+                    return True
+                except Exception as e2:
+                    logger.error(f"CPU modunda da yükleme hatası: {str(e2)}")
+                    return False
+            
             logger.error(f"Model yükleme hatası: {str(e)}")
             return False
         finally:
