@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-surface-bg: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-border-light: #E2E8F0;
+  
+  --font-sans: "Inter", "Segoe UI", sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface-bg);
+    color: #0F172A;
+    font-family: var(--font-sans);
+  }
+}

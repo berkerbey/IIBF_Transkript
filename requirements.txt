@@ -1,0 +1,8 @@
+faster-whisper
+customtkinter
+python-docx
+pandas
+tqdm
+pyinstaller
+pillow
+requests

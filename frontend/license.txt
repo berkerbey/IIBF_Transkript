@@ -1,0 +1,20 @@
+SON KULLANICI LİSANS SÖZLEŞMESİ (EULA)
+
+Bu sözleşme, Pamukkale Üniversitesi İktisadi ve İdari Bilimler Fakültesi (Bundan sonra "Kurum" olarak anılacaktır) tarafından geliştirilen "PAÜ İİBF Transkripsiyon Aracı" (Bundan sonra "Yazılım" olarak anılacaktır) ile ilgili kullanım şartlarını belirlemektedir.
+
+1. LİSANS VERİLMESİ
+Bu yazılım, akademik ve idari çalışmalar için ücretsiz olarak sunulmaktadır. Yazılımın ticari amaçlarla kullanılması, satılması veya kiralanması yasaktır.
+
+2. VERİ GİZLİLİĞİ VE GÜVENLİĞİ
+Yazılım, tüm ses ve görüntü işleme süreçlerini yerel cihazda (çevrimdışı) gerçekleştirmektedir. Hiçbir ses verisi, transkript metni veya kullanıcı bilgisi harici sunuculara veya internete aktarılmaz. Kullanıcı, yazılımın yerel cihazdaki kullanımından ve çıktıların güvenliğinden kendisi sorumludur.
+
+3. KULLANIM KISITLAMALARI
+Yazılımın tersine mühendislik yoluyla parçalara ayrılması, kaynak kodunun izinsiz kopyalanması veya Kurum onayı olmadan dağıtılması yasaktır.
+
+4. GARANTİ MUAFİYETİ VE SORUMLULUK SINIRI
+Yazılım "OLDUĞU GİBİ" sunulmaktadır. Kurum, yazılımın kullanımından doğabilecek dolaylı veya doğrudan herhangi bir veri kaybı, maddi zarar veya performans sorunundan sorumlu tutulamaz. Yazılımın ürettiği transkript metinlerinin doğruluğu kullanıcı tarafından kontrol edilmelidir; teknik bir asistan niteliğindedir ve %100 doğruluk garantisi vermez.
+
+5. GÜNCELLEMELER
+Yazılım, hata giderme ve performans iyileştirmeleri için internet bağlantısı olduğunda güncelleme denetimi yapabilir ve kullanıcı onayı ile güncellenebilir.
+
+Yazılımı kurarak ve kullanarak bu sözleşme şartlarını kabul etmiş sayılmaktınız.

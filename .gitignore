@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env
+
+# Build & Dist
+dist/
+build/
+dist-electron/
+extraResources/python/
+
+# App Specific
+models/
+outputs/
+data/
+logs/
+ffmpeg/
+config.json
+
+# Node
+node_modules/
+frontend/dist/
+frontend/dist-electron/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.sln
+*.sw?
+.claude/

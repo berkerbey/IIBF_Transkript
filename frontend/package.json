@@ -1,0 +1,63 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.1.0-alpha.1",
+  "productName": "PAU_IIBF_Transkript",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "desktop": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && electron main.cjs\"",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.pau.iibf.transcriber",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "extraResources": [
+      {
+        "from": "extraResources",
+        "to": "."
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "license.txt",
+      "artifactName": "PAU_IIBF_Transkript_Kurulum.exe"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "berkerbey",
+        "repo": "IIBF_Transkript"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1",
+    "electron-updater": "^6.8.3",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.11.0",
+    "tailwindcss": "^4.2.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.10",
+    "wait-on": "^9.0.5"
+  },
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}
